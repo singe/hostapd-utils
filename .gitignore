@@ -1,0 +1,23 @@
+.DS_Store
+
+# Generated hostapd build state and configuration.
+**/build/
+**/.config
+**/*.o
+**/*.d
+**/*.cmd
+
+# Generated utility binaries.
+ifcap/ifcap
+ifcap/ifcap-2.10
+ifcap/ifcap-2.12
+hapdconf-check/hapdconf-check
+hapdconf-check/hapdconf-check-2.10
+hapdconf-check/hapdconf-check-2.12
+
+# Local capability reports and test output.
+ifcap-*.json
+*-capabilities.json
+*.log
+*.out
+*.err

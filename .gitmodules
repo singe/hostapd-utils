@@ -1,0 +1,6 @@
+[submodule "hostapd-2.10"]
+	path = hostapd-2.10
+	url = https://git.w1.fi/cgit/hostap/
+[submodule "hostapd-2.12"]
+	path = hostapd-2.12
+	url = https://git.w1.fi/cgit/hostap/
