@@ -2,6 +2,8 @@
 
 hostapd-utils contains small tools built on hostapd's own code: `ifcap` reports the Wi-Fi capability model of a Linux wireless interface, and `hapdconf-check` validates hostapd configuration files using hostapd's parser and semantic checks.
 
+This project is licensed under the GNU General Public License, version 3 only. See [`LICENSE`](LICENSE).
+
 ## Source setup
 
 The hostapd releases are pinned as submodules. Clone this repository with `--recurse-submodules`, or initialize them in an existing checkout with `git submodule update --init --recursive`.

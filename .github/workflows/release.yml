@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Check out source and hostapd submodule
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential \
+            libnl-3-dev \
+            libnl-genl-3-dev \
+            libssl-dev
+
+      - name: Build hostapd 2.12 utilities
+        run: |
+          make -C ifcap
+          make -C hapdconf-check
+
+      - name: Package binaries
+        env:
+          ARCH: ${{ matrix.arch }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -eu
+          package="hostapd-utils-${VERSION}-linux-${ARCH}"
+          mkdir -p "dist/${package}"
+          cp ifcap/ifcap "dist/${package}/ifcap"
+          cp hapdconf-check/hapdconf-check "dist/${package}/hapdconf-check"
+          cp README.md LICENSE "dist/${package}/"
+          tar -C dist -czf "${package}.tar.gz" "${package}"
+
+      - name: Upload architecture package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.arch }}
+          path: hostapd-utils-${{ github.ref_name }}-linux-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download architecture packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum hostapd-utils-*.tar.gz > SHA256SUMS
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/hostapd-utils-*.tar.gz
+            dist/SHA256SUMS
+          generate_release_notes: false
+          body: |
+            ## hostapd-utils ${{ github.ref_name }}
+
+            This release provides prebuilt hostapd 2.12 utilities for Linux amd64 and arm64:
+
+            - `ifcap` reports the Wi-Fi capability model of a wireless interface as schema 1.2 JSON.
+            - `hapdconf-check` validates hostapd configuration files.
+
+            Verify downloads with `sha256sum -c SHA256SUMS`.
+
+            The hostapd 2.10 build remains available for compatibility testing but is not included in release binaries.
