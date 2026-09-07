@@ -22,10 +22,9 @@ jobs:
             runner: ubuntu-24.04-arm
 
     steps:
-      - name: Check out source and hostapd submodule
+      - name: Check out source
         uses: actions/checkout@v6
         with:
-          submodules: recursive
           fetch-depth: 0
 
       - name: Install build dependencies
@@ -35,7 +34,19 @@ jobs:
             build-essential \
             libnl-3-dev \
             libnl-genl-3-dev \
-            libssl-dev
+            libssl-dev \
+            curl
+
+      - name: Download pinned hostapd 2.12 source
+        run: |
+          set -eu
+          curl --fail --location --retry 3 \
+            https://w1.fi/releases/hostapd-2.12.tar.gz \
+            -o /tmp/hostapd-2.12.tar.gz
+          printf '%s  %s\n' \
+            '3d952125dc2b6868532b39264e16eae4d0bdf601b82229e6f5e7caedbd7ce3c1c2b842932b0afe33d9c3077dc4d536e04f8b47fb5d35f5e253d97ab8465eda81' \
+            /tmp/hostapd-2.12.tar.gz | sha512sum --check --status
+          tar -xzf /tmp/hostapd-2.12.tar.gz
 
       - name: Build hostapd 2.12 utilities
         run: |

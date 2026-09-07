@@ -21,10 +21,9 @@ jobs:
             runner: ubuntu-24.04-arm
 
     steps:
-      - name: Check out source and hostapd submodules
+      - name: Check out source
         uses: actions/checkout@v6
         with:
-          submodules: recursive
           fetch-depth: 0
 
       - name: Install build dependencies
@@ -35,7 +34,23 @@ jobs:
             libnl-3-dev \
             libnl-genl-3-dev \
             libssl-dev \
-            python3
+            python3 \
+            curl
+
+      - name: Download pinned hostapd release sources
+        run: |
+          set -eu
+          for version in 2.10 2.12; do
+            case "${version}" in
+              2.10) sha512='243baa82d621f859d2507d8d5beb0ebda15a75548a62451dc9bca42717dcc8607adac49b354919a41d8257d16d07ac7268203a79750db0cfb34b51f80ff1ce8f' ;;
+              2.12) sha512='3d952125dc2b6868532b39264e16eae4d0bdf601b82229e6f5e7caedbd7ce3c1c2b842932b0afe33d9c3077dc4d536e04f8b47fb5d35f5e253d97ab8465eda81' ;;
+            esac
+            curl --fail --location --retry 3 \
+              "https://w1.fi/releases/hostapd-${version}.tar.gz" \
+              -o "/tmp/hostapd-${version}.tar.gz"
+            printf '%s  %s\n' "${sha512}" "/tmp/hostapd-${version}.tar.gz" | sha512sum --check --status
+            tar -xzf "/tmp/hostapd-${version}.tar.gz"
+          done
 
       - name: Run ifcap release matrix
         run: make -C ifcap test-all
