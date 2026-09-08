@@ -1,6 +1,9 @@
 # Invoked from $(HOSTAPD_DIR)/hostapd by ifcap/Makefile.  This deliberately
 # overlays the upstream build instead of changing any vendored source file.
 .DEFAULT_GOAL := ifcap
+# The capability report uses the release version as a compatibility identifier.
+# Do not append a Git description when hostapd is built from a submodule.
+CONFIG_NO_GITVER := y
 include Makefile
 
 IFCAP_DIR ?= $(abspath ../../ifcap)

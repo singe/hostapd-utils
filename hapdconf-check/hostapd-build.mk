@@ -1,6 +1,8 @@
 # Invoked from $(HOSTAPD_DIR)/hostapd. It overlays, but never modifies, the
 # upstream build and keeps the only source-version-sensitive glue in one file.
 .DEFAULT_GOAL := hapdconf-check
+# Keep utility builds reproducible when hostapd is checked out as a submodule.
+CONFIG_NO_GITVER := y
 include Makefile
 
 HAPDCONF_CHECK_DIR ?= $(abspath ../../hapdconf-check)

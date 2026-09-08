@@ -13,3 +13,7 @@ if [ "$version" = hostapd-2.12 ]; then
   grep -q '^CONFIG_IEEE80211BE=y$' /tmp/ifcap-build-config.out
 fi
 grep -q '^CONFIG_DEBUG_FILE=y$' /tmp/ifcap-build-config.out
+if strings "$bin" | grep -Fq "${version#hostapd-}-hostap_"; then
+  echo "ifcap embedded a Git suffix in the hostapd version" >&2
+  exit 1
+fi
