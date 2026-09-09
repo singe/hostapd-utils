@@ -99,15 +99,23 @@ int
 ifcap_regulatory_is_dfs(const struct ifcap_regulatory *reg, int freq_mhz)
 {
 	unsigned int	i;
+	int		matched = 0;
 	for (i = 0; i < reg->num_rules; i++) {
 		const struct ifcap_regulatory_rule *r = &reg->rules[i];
-		if (freq_mhz >= (int)r->start_mhz && freq_mhz <= (int)r->end_mhz &&
-		    (r->flags & NL80211_RRF_DFS))
+		if (freq_mhz < (int)r->start_mhz || freq_mhz > (int)r->end_mhz)
+			continue;
+		matched = 1;
+		if (r->flags & NL80211_RRF_DFS)
 			return 1;
 	}
+	/* An explicit matching non-DFS rule takes precedence over the fallback. */
+	if (matched)
+		return 0;
 	/* Some kernel/hwsim combinations expose the ETSI DFS region but omit
 	 * DFS bits from individual GET_REG rules. Hostapd still treats the
-	 * standard mid-band 5 GHz channels as radar in that region. */
+	 * standard mid-band 5 GHz channels as radar in that region. Only use this
+	 * when no rule covers the frequency; otherwise it can override a valid
+	 * non-DFS rule such as ZA's 5490-5710 MHz range. */
 	if (reg->dfs_region == NL80211_DFS_ETSI && freq_mhz >= 5260 &&
 	    freq_mhz <= 5720)
 		return 1;

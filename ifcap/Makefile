@@ -11,7 +11,7 @@ EMBED_CONFIG := $(if $(HOSTAPD_CONFIG),$(abspath $(HOSTAPD_CONFIG)),$(PROFILE))
 EMBED_EXTRA := $(if $(HOSTAPD_CONFIG),,CONFIG_DEBUG_FILE=y)
 BIN ?= ifcap
 
-.PHONY: all clean test test-2.10 test-2.12 test-all test-version test-live test-live-2.10 test-live-2.12 test-live-version
+.PHONY: all clean test test-2.10 test-2.12 test-all test-version test-regulatory test-regulatory-2.10 test-regulatory-2.12 test-live test-live-2.10 test-live-2.12 test-live-version
 all:
 	$(MAKE) -C $(HOSTAPD_ABS)/hostapd -f $(IFCAP_ABS)/hostapd-build.mk \
 		CONFIG_FILE=$(CONFIG) HOSTAPD_ALPINE_CONFIG=$(PROFILE) \
@@ -31,10 +31,23 @@ test-2.10:
 test-2.12:
 	$(MAKE) HOSTAPD_DIR=../hostapd-2.12 HOSTAPD_PROFILE=alpine-hostapd.config BIN=ifcap-2.12 test-version
 
-test-all: test-2.10 test-2.12
+test-all: test-2.10 test-2.12 test-regulatory-2.10 test-regulatory-2.12
 
 test-version: all
 	sh ./tests/test-json.sh ./$(BIN) $(HOSTAPD_DIR)
+
+test-regulatory:
+	$(CC) -I$(HOSTAPD_ABS)/src -I$(IFCAP_ABS) $(shell pkg-config --cflags libnl-3.0 libnl-genl-3.0) \
+		-o /tmp/ifcap-regulatory-test $(IFCAP_ABS)/ifcap-regulatory.c $(IFCAP_ABS)/tests/test-regulatory.c \
+		$(shell pkg-config --libs libnl-3.0 libnl-genl-3.0)
+	/tmp/ifcap-regulatory-test
+	rm -f /tmp/ifcap-regulatory-test
+
+test-regulatory-2.10:
+	$(MAKE) HOSTAPD_DIR=../hostapd-2.10 test-regulatory
+
+test-regulatory-2.12:
+	$(MAKE) HOSTAPD_DIR=../hostapd-2.12 test-regulatory
 
 test-live: all
 	@test -n "$(IFCAP_INTERFACE)" || (echo 'Set IFCAP_INTERFACE, e.g. make test-live IFCAP_INTERFACE=wlan0' >&2; exit 2)

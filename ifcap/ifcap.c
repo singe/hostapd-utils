@@ -189,17 +189,19 @@ chan_dfs_available(const struct hostapd_channel_data *c)
 }
 #ifdef CONFIG_IEEE80211BE
 static void	write_block(const struct hostapd_hw_modes *m, int start, int count, const struct ifcap_regulatory *reg, int dfs_capable){
-	int		i, radar = 0, dfs_ready = 1, usable = 1;
+	int		i, radar = 0, regulatory_radar = 0, dfs_ready = 1, usable = 1;
 	unsigned int	cac = 0;
 	u32		width_flag = count == 4 ? HOSTAPD_CHAN_WIDTH_80 : count == 8 ? HOSTAPD_CHAN_WIDTH_160 : HOSTAPD_CHAN_WIDTH_320;
 	int		center = (m->channels[start].freq + m->channels[start + count - 1].freq) / 2;
 	printf("{\"width_mhz\":%d,\"center_frequency_mhz\":%d,\"channels\":[", count * 20, center);
 	for (i = 0; i < count; i++) {
 		const struct hostapd_channel_data *c = &m->channels[start + i];
-		int		this_radar = chan_radar(reg, c->freq) || (c->flag & HOSTAPD_CHAN_RADAR);
+		int		this_regulatory_radar = chan_radar(reg, c->freq);
+		int		this_radar = this_regulatory_radar || (c->flag & HOSTAPD_CHAN_RADAR);
 		if (i)
 			putchar(',');
 		printf("%d", c->chan);
+		regulatory_radar |= this_regulatory_radar;
 		radar |= this_radar;
 		if (this_radar && !chan_dfs_available(c))
 			dfs_ready = 0;
@@ -208,7 +210,7 @@ static void	write_block(const struct hostapd_hw_modes *m, int start, int count, 
 		if (c->dfs_cac_ms > cac)
 			cac = c->dfs_cac_ms;
 	}
-	printf("],\"regulatory_radar\":%s,\"ap_usable\":%s,\"requires_dfs_cac\":%s,\"dfs_cac_ms\":", radar ? "true" : "false", usable ? "true" : "false", radar && !dfs_ready ? "true" : "false");
+	printf("],\"regulatory_radar\":%s,\"ap_usable\":%s,\"requires_dfs_cac\":%s,\"dfs_cac_ms\":", regulatory_radar ? "true" : "false", usable ? "true" : "false", radar && !dfs_ready ? "true" : "false");
 	json_cac(cac);
 	putchar('}');
 }
@@ -291,7 +293,8 @@ static void	write_modes(const struct hostapd_hw_modes *modes, u16 num, const str
 	printf("],\"channels\":[");
 		for (j = 0; j < m->num_channels; j++) {
 			const struct hostapd_channel_data *c = &m->channels[j];
-			int		radar = chan_radar(reg, c->freq) || (c->flag & HOSTAPD_CHAN_RADAR);
+			int		regulatory_radar = chan_radar(reg, c->freq);
+			int		radar = regulatory_radar || (c->flag & HOSTAPD_CHAN_RADAR);
 			int		dfs_ready = !radar || chan_dfs_available(c);
 			int		usable = !(c->flag & (HOSTAPD_CHAN_DISABLED | HOSTAPD_CHAN_NO_IR)) && (!radar || (dfs_capable && dfs_ready));
 			if (j)
@@ -301,9 +304,9 @@ static void	write_modes(const struct hostapd_hw_modes *modes, u16 num, const str
 			printf(",\"allowed_widths\":");
 			json_bits(c->allowed_bw, width_flags, ARRAY_SIZE(width_flags));
 #ifdef CONFIG_IEEE80211BE
-			printf(",\"dfs_cac_ms\":%u,\"puncturing_bitmap\":%u,\"regulatory_radar\":%s,\"dfs_state\":", c->dfs_cac_ms, c->punct_bitmap, radar ? "true" : "false");
+			printf(",\"dfs_cac_ms\":%u,\"puncturing_bitmap\":%u,\"regulatory_radar\":%s,\"dfs_state\":", c->dfs_cac_ms, c->punct_bitmap, regulatory_radar ? "true" : "false");
 #else
-			printf(",\"dfs_cac_ms\":%u,\"regulatory_radar\":%s,\"dfs_state\":", c->dfs_cac_ms, radar ? "true" : "false");
+			printf(",\"dfs_cac_ms\":%u,\"regulatory_radar\":%s,\"dfs_state\":", c->dfs_cac_ms, regulatory_radar ? "true" : "false");
 #endif
 			json_string(chan_dfs_available(c) ? "available" : (c->flag & HOSTAPD_CHAN_DFS_MASK) == HOSTAPD_CHAN_DFS_USABLE ? "usable" : (c->flag & HOSTAPD_CHAN_DFS_MASK) == HOSTAPD_CHAN_DFS_UNAVAILABLE ? "unavailable" : "unknown");
 			printf(",\"ap\":{\"usable\":%s,\"requires_dfs_cac\":%s,\"dfs_cac_ms\":", usable ? "true" : "false", radar && !dfs_ready ? "true" : "false");
